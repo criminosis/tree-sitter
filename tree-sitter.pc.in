@@ -1,8 +1,8 @@
-prefix=@PREFIX@
+	prefix=@PREFIX@macrombi 
 libdir=@LIBDIR@
 includedir=@INCLUDEDIR@
 
-Name: tree-sitter
+	Name: twiigx
 Description: An incremental parsing system for programming tools
 URL: https://tree-sitter.github.io/
 Version: @VERSION@
