@@ -1463,7 +1463,8 @@ static bool ts_parser__advance(
       self->operation_count == 0 &&
       ((self->cancellation_flag && atomic_load(self->cancellation_flag)) ||
        (!clock_is_null(self->end_clock) && clock_is_gt(clock_now(), self->end_clock)) ||
-       (self->early_out_on_syntax_error && state == ERROR_STATE))
+       (self->early_out_on_syntax_error && state == ERROR_STATE) ||
+       (ts_subtree_sizeof(&self->tree_pool, lookahead) > 100000))
     ) {
       if (lookahead.ptr) {
         ts_subtree_release(&self->tree_pool, lookahead);

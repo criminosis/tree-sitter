@@ -616,6 +616,51 @@ void ts_subtree_release(SubtreePool *pool, Subtree self) {
   }
 }
 
+uint64_t ts_subtree_sizeof(SubtreePool *pool, Subtree self) {
+  if (self.data.is_inline) {
+    return sizeof(SubtreeInlineData);
+  }
+
+  uint64_t total = sizeof(SubtreeHeapData);
+  assert(self.ptr->ref_count > 0);
+
+  typedef Array(MutableSubtree *) ChildTreeArray;
+  ChildTreeArray children = array_new();
+  array_reserve(&children, pool->tree_stack.capacity);
+
+  for (uint32_t i = 0; i < pool->tree_stack.size; i++) {
+    total += sizeof(SubtreeHeapData);
+    MutableSubtree *tree = &pool->tree_stack.contents[i];
+    array_push(&children, tree);
+  }
+
+  while (children.size > 0) {
+    MutableSubtree *tree = array_pop(&children);
+    if (tree->ptr->child_count > 0) {
+      Subtree *child_tree = ts_subtree_children(*tree);
+      for (uint32_t i = 0; i < tree->ptr->child_count; i++) {
+        Subtree *child = &child_tree[i];
+        if (child->data.is_inline) {
+          total += sizeof(SubtreeInlineData);
+        };
+        assert(child->ptr->ref_count > 0);
+        total += sizeof(SubtreeHeapData);
+        array_push(&children, child->ptr);
+      }
+    } else {
+      if (tree->ptr->has_external_tokens) {
+        total += sizeof(tree->ptr->external_scanner_state.length);
+        if (tree->ptr->external_scanner_state.length > sizeof(tree->ptr->external_scanner_state.short_data)) {
+          total+= sizeof(char) * tree->ptr->external_scanner_state.length;
+        } else {
+          total += sizeof(tree->ptr->external_scanner_state.short_data);  
+        }
+      }
+    }
+  }
+  return total;
+}
+
 int ts_subtree_compare(Subtree left, Subtree right) {
   if (ts_subtree_symbol(left) < ts_subtree_symbol(right)) return -1;
   if (ts_subtree_symbol(right) < ts_subtree_symbol(left)) return 1;
