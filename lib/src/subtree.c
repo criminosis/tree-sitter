@@ -658,6 +658,7 @@ uint64_t ts_subtree_sizeof(SubtreePool *pool, Subtree self) {
       }
     }
   }
+  printf("Total: %d", total);
   return total;
 }
 
