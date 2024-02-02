@@ -120,6 +120,33 @@ recur:
   }
 }
 
+static uint64_t stack_node_sizeof(
+  StackNode *self,
+  StackNodeArray *pool,
+  SubtreePool *subtree_pool
+) {
+  uint64_t total = sizeof(StackNode);
+recur:
+  StackNode *first_predecessor = NULL;
+  if (self->link_count > 0) {
+    for (unsigned i = self->link_count - 1; i > 0; i--) {
+      StackLink* link = &self->links[i];
+      if (link->subtree.ptr) total+=ts_subtree_sizeof(subtree_pool, &link->subtree);
+      total+=stack_node_sizeof(link->node, pool, subtree_pool);
+    }
+    StackLink* link = &self->links[0];
+    if (link->subtree.ptr) ts_subtree_sizeof(subtree_pool, &link->subtree);
+    first_predecessor = self->links[0].node;
+  }
+
+  if (first_predecessor) {
+    self = first_predecessor;
+    goto recur;
+  }
+
+  return total;
+}
+
 static StackNode *stack_node_new(
   StackNode *previous_node,
   Subtree subtree,
@@ -265,6 +292,27 @@ static void stack_head_delete(
     }
     stack_node_release(self->node, pool, subtree_pool);
   }
+}
+
+static uint64_t stack_head_sizeof(
+  StackHead *self,
+  StackNodeArray *pool,
+  SubtreePool *subtree_pool
+) {
+  uint64_t total = sizeof(StackHead);
+  if (self->node) {
+    if (self->last_external_token.ptr) {
+      ts_subtree_sizeof(subtree_pool, &self->last_external_token);
+    }
+    if (self->lookahead_when_paused.ptr) {
+      ts_subtree_sizeof(subtree_pool, &self->lookahead_when_paused);
+    }
+    if (self->summary) {
+      total += sizeof(StackSummaryEntry) * self->summary->size;
+    }
+    stack_node_sizeof(self->node, pool, subtree_pool);
+  }
+  return total;
 }
 
 static StackVersion ts_stack__add_version(
@@ -746,6 +794,15 @@ void ts_stack_clear(Stack *self) {
     .last_external_token = NULL_SUBTREE,
     .lookahead_when_paused = NULL_SUBTREE,
   }));
+}
+
+uint64_t ts_stack_sizeof(Stack *self) {
+  uint64_t total = sizeof(Stack);
+  for (uint32_t i = 0; i < self->heads.size; i++) {
+    total += sizeof(StackHead);
+    total += stack_head_sizeof(&self->heads.contents[i], &self->node_pool, self->subtree_pool);
+  }
+  return total;
 }
 
 bool ts_stack_print_dot_graph(Stack *self, const TSLanguage *language, FILE *f) {

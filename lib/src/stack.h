@@ -122,6 +122,8 @@ void ts_stack_remove_version(Stack *, StackVersion);
 
 void ts_stack_clear(Stack *);
 
+uint64_t ts_stack_sizeof(Stack *);
+
 bool ts_stack_print_dot_graph(Stack *, const TSLanguage *, FILE *);
 
 typedef void (*StackIterateCallback)(void *, TSStateId, uint32_t);

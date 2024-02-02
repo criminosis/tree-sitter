@@ -616,13 +616,13 @@ void ts_subtree_release(SubtreePool *pool, Subtree self) {
   }
 }
 
-uint64_t ts_subtree_sizeof(SubtreePool *pool, Subtree self) {
-  if (self.data.is_inline) {
+uint64_t ts_subtree_sizeof(SubtreePool *pool, Subtree* lookahead) {
+  if (lookahead->data.is_inline) {
     return sizeof(SubtreeInlineData);
   }
 
   uint64_t total = sizeof(SubtreeHeapData);
-  assert(self.ptr->ref_count > 0);
+  assert(lookahead->ptr->ref_count > 0);
 
   typedef Array(MutableSubtree *) ChildTreeArray;
   ChildTreeArray children = array_new();
@@ -658,7 +658,6 @@ uint64_t ts_subtree_sizeof(SubtreePool *pool, Subtree self) {
       }
     }
   }
-  printf("Total: %d", total);
   return total;
 }
 

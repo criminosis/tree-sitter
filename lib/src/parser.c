@@ -383,6 +383,17 @@ static bool ts_parser__can_reuse_first_leaf(
   return current_lex_mode.external_lex_state == 0 && table_entry->is_reusable;
 }
 
+uint64_t ts_memory(TSParser *parser, SubtreePool *pool, Subtree* lookahead) {
+  uint64_t total = 0;
+  total += sizeof(TSParser);
+  total += sizeof(StackEntry) * parser->reusable_node.stack.size;
+  total += ts_stack_sizeof(parser->stack);
+  total += ts_subtree_sizeof(&parser->tree_pool, &parser->finished_tree);
+
+  printf("Total: %d\n", total);
+  return total;
+}
+
 static Subtree ts_parser__lex(
   TSParser *self,
   StackVersion version,
@@ -1464,7 +1475,7 @@ static bool ts_parser__advance(
       ((self->cancellation_flag && atomic_load(self->cancellation_flag)) ||
        (!clock_is_null(self->end_clock) && clock_is_gt(clock_now(), self->end_clock)) ||
        (self->early_out_on_syntax_error && state == ERROR_STATE) ||
-       (ts_subtree_sizeof(&self->tree_pool, lookahead) > 100000))
+       (ts_memory(self, &self->tree_pool, &lookahead) > 100000))
     ) {
       if (lookahead.ptr) {
         ts_subtree_release(&self->tree_pool, lookahead);
